@@ -1,12 +1,12 @@
 """
-Yuki Protocol v1.1 – добавлена аутентификация, подтверждение команд.
+Yuki Protocol v1.2 – добавлена авторизация устройств через WebUI.
 """
 import json
 import time
 import uuid
 from typing import Optional, Dict, Any, List
 
-PROTOCOL_VERSION = "yuki/1.1"
+PROTOCOL_VERSION = "yuki/1.2"
 
 class YukiMessage:
     def __init__(self, msg_type: str, payload: Dict[str, Any], msg_id: Optional[str] = None):
@@ -28,8 +28,8 @@ class YukiMessage:
     @classmethod
     def from_json(cls, data: str) -> "YukiMessage":
         obj = json.loads(data)
-        # Поддержка версий 1.0 и 1.1
-        if obj.get("protocol") not in ["yuki/1.0", "yuki/1.1"]:
+        # Поддержка версий 1.0, 1.1, 1.2
+        if obj.get("protocol") not in ["yuki/1.0", "yuki/1.1", "yuki/1.2"]:
             raise ValueError(f"Unsupported protocol version: {obj.get('protocol')}")
         msg = cls(obj["type"], obj.get("payload", {}), obj.get("id"))
         msg.timestamp = obj.get("timestamp", msg.timestamp)
@@ -92,7 +92,6 @@ def devices_update_message(devices: Dict[str, Dict], removed: List[str] = None) 
 
 
 def confirm_command_message(device_id: str, command: str, params: Dict = None) -> YukiMessage:
-    """Запрос подтверждения опасной команды (Core -> WebUI)."""
     return YukiMessage("confirm_command", {
         "device_id": device_id,
         "command": command,
@@ -101,7 +100,23 @@ def confirm_command_message(device_id: str, command: str, params: Dict = None) -
 
 
 def confirm_response_message(original_id: str, approved: bool) -> YukiMessage:
-    """Ответ WebUI на запрос подтверждения."""
     msg = YukiMessage("confirm_response", {"approved": approved})
     msg.id = original_id
+    return msg
+
+
+def device_auth_request_message(device_id: str, device_type: str, capabilities: List[str] = None) -> YukiMessage:
+    """Запрос авторизации нового устройства (Core -> WebUI)."""
+    payload = {
+        "device_id": device_id,
+        "device_type": device_type,
+        "capabilities": capabilities or []
+    }
+    return YukiMessage("device_auth_request", payload)
+
+
+def device_auth_response_message(request_id: str, approved: bool) -> YukiMessage:
+    """Ответ WebUI на запрос авторизации устройства."""
+    msg = YukiMessage("device_auth_response", {"approved": approved})
+    msg.id = request_id
     return msg
