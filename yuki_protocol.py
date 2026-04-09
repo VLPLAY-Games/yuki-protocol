@@ -1,12 +1,12 @@
 """
-Yuki Protocol v1.2 – добавлена авторизация устройств через WebUI.
+Yuki Protocol v1.1 – добавлены сообщения для управления авторизацией устройств.
 """
 import json
 import time
 import uuid
 from typing import Optional, Dict, Any, List
 
-PROTOCOL_VERSION = "yuki/1.2"
+PROTOCOL_VERSION = "yuki/1.1"
 
 class YukiMessage:
     def __init__(self, msg_type: str, payload: Dict[str, Any], msg_id: Optional[str] = None):
@@ -28,8 +28,7 @@ class YukiMessage:
     @classmethod
     def from_json(cls, data: str) -> "YukiMessage":
         obj = json.loads(data)
-        # Поддержка версий 1.0, 1.1, 1.2
-        if obj.get("protocol") not in ["yuki/1.0", "yuki/1.1", "yuki/1.2"]:
+        if obj.get("protocol") not in ["yuki/1.0", "yuki/1.1"]:
             raise ValueError(f"Unsupported protocol version: {obj.get('protocol')}")
         msg = cls(obj["type"], obj.get("payload", {}), obj.get("id"))
         msg.timestamp = obj.get("timestamp", msg.timestamp)
@@ -105,18 +104,17 @@ def confirm_response_message(original_id: str, approved: bool) -> YukiMessage:
     return msg
 
 
-def device_auth_request_message(device_id: str, device_type: str, capabilities: List[str] = None) -> YukiMessage:
+def device_auth_request_message(device_id: str, device_type: str, capabilities: List[str]) -> YukiMessage:
     """Запрос авторизации нового устройства (Core -> WebUI)."""
-    payload = {
+    return YukiMessage("device_auth_request", {
         "device_id": device_id,
         "device_type": device_type,
-        "capabilities": capabilities or []
-    }
-    return YukiMessage("device_auth_request", payload)
+        "capabilities": capabilities
+    })
 
 
 def device_auth_response_message(request_id: str, approved: bool) -> YukiMessage:
-    """Ответ WebUI на запрос авторизации устройства."""
+    """Ответ WebUI на запрос авторизации."""
     msg = YukiMessage("device_auth_response", {"approved": approved})
     msg.id = request_id
     return msg
