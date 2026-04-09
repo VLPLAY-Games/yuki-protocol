@@ -1,5 +1,6 @@
 """
-Yuki Protocol v1.1 – добавлены сообщения для управления авторизацией устройств.
+Yuki Protocol v1.1 – добавлены сообщения для управления авторизацией устройств,
+ротации токенов и информации о токене.
 """
 import json
 import time
@@ -118,3 +119,56 @@ def device_auth_response_message(request_id: str, approved: bool) -> YukiMessage
     msg = YukiMessage("device_auth_response", {"approved": approved})
     msg.id = request_id
     return msg
+
+
+# ------------------- Новые сообщения для ротации токенов -------------------
+
+def token_update_message(new_token: str, reason: str = "admin") -> YukiMessage:
+    """
+    Сообщение от сервера к устройству с новым токеном.
+    Устройство должно сохранить этот токен и использовать при последующих подключениях.
+    """
+    return YukiMessage("token_update", {
+        "new_token": new_token,
+        "reason": reason
+    })
+
+
+def token_info_message(created_at: Optional[float], rotation_interval_hours: int,
+                       expires_in: Optional[float] = None) -> YukiMessage:
+    """
+    Информация о текущем токене (отправляется сервером в ответ на запрос get_token_info).
+    """
+    payload = {
+        "created_at": created_at,
+        "rotation_interval_hours": rotation_interval_hours,
+        "expires_in": expires_in
+    }
+    return YukiMessage("token_info", payload)
+
+
+def token_rotated_message(success: bool, new_token: Optional[str] = None) -> YukiMessage:
+    """
+    Ответ сервера на команду rotate_token (WebUI -> Core).
+    Сообщает об успешной или неудачной ротации.
+    """
+    payload = {"success": success}
+    if new_token:
+        payload["new_token"] = new_token
+    return YukiMessage("token_rotated", payload)
+
+
+# ------------------- Вспомогательные команды для WebUI -------------------
+
+def rotate_token_request_message() -> YukiMessage:
+    """
+    Запрос от WebUI к серверу на принудительную ротацию токена.
+    """
+    return YukiMessage("rotate_token", {})
+
+
+def get_token_info_request_message() -> YukiMessage:
+    """
+    Запрос от WebUI к серверу на получение информации о токене.
+    """
+    return YukiMessage("get_token_info", {})
