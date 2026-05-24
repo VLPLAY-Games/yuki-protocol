@@ -172,3 +172,103 @@ def get_token_info_request_message() -> YukiMessage:
     Запрос от WebUI к серверу на получение информации о токене.
     """
     return YukiMessage("get_token_info", {})
+
+# ==================== ДЛЯ РАСШИРЕННОГО СТАТУСА ====================
+
+def extended_status_message(device_id: str, status: str, substatus: str = None, 
+                           details: Dict = None) -> YukiMessage:
+    """
+    Расширенный статус устройства.
+    status: основной статус (online/offline/pending)
+    substatus: дополнительный (idle, working, sleeping, charging, error, updating)
+    details: дополнительная информация
+    """
+    payload = {
+        "device_id": device_id,
+        "status": status,
+        "substatus": substatus,
+        "details": details or {}
+    }
+    return YukiMessage("extended_status", payload)
+
+
+# ==================== ДЛЯ МЕТРИК ====================
+
+def metrics_message(device_id: str, metrics: Dict) -> YukiMessage:
+    """
+    Унифицированное сообщение с метриками.
+    metrics: {
+        "cpu": 45.2,           # % (для ПК/ESP)
+        "memory": 1024,        # MB used
+        "memory_percent": 32.5,# %
+        "temperature": 23.5,   # °C (для увлажнителя/ESP)
+        "humidity": 55.0,      # % (для увлажнителя)
+        "battery": 85,         # % (для мобильных)
+        "uptime": 86400,       # seconds
+        "disk_used": 500,      # GB
+        "disk_total": 1000,    # GB
+        "network_rx": 1024,    # KB/s
+        "network_tx": 512,     # KB/s
+        "water_level": 70,     # % (для увлажнителя)
+        "fan_speed": 3,        # уровень
+        "custom": {}           # любые кастомные метрики
+    }
+    """
+    return YukiMessage("metrics", {
+        "device_id": device_id,
+        "metrics": metrics,
+        "timestamp": int(time.time())
+    })
+
+
+def metrics_request_message(device_id: str, metric_types: List[str] = None) -> YukiMessage:
+    """Запрос метрик от устройства"""
+    return YukiMessage("metrics_request", {
+        "device_id": device_id,
+        "metric_types": metric_types or []
+    })
+
+
+# ==================== ДЛЯ СВЯЗИ УСТРОЙСТВО->УСТРОЙСТВО ====================
+
+def device_to_device_message(from_device_id: str, to_device_id: str, 
+                             command: str, payload: Dict = None,
+                             require_response: bool = False) -> YukiMessage:
+    """
+    Отправка команды от одного устройства другому через ядро.
+    """
+    return YukiMessage("device_to_device", {
+        "from_device_id": from_device_id,
+        "to_device_id": to_device_id,
+        "command": command,
+        "payload": payload or {},
+        "require_response": require_response,
+        "sent_at": int(time.time())
+    })
+
+
+def device_response_message(original_id: str, from_device_id: str, 
+                           to_device_id: str, success: bool, 
+                           result: Any = None, error: str = None) -> YukiMessage:
+    """Ответ от устройства на запрос от другого устройства"""
+    msg = YukiMessage("device_response", {
+        "from_device_id": from_device_id,
+        "to_device_id": to_device_id,
+        "success": success,
+        "result": result,
+        "error": error
+    })
+    msg.id = original_id
+    return msg
+
+
+def device_broadcast_message(from_device_id: str, command: str, 
+                            payload: Dict = None, device_filter: List[str] = None) -> YukiMessage:
+    """Широковещательная команда от устройства всем (или фильтрованным) устройствам"""
+    return YukiMessage("device_broadcast", {
+        "from_device_id": from_device_id,
+        "command": command,
+        "payload": payload or {},
+        "device_filter": device_filter,  # None = всем, иначе список ID
+        "sent_at": int(time.time())
+    })
