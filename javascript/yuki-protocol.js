@@ -117,8 +117,10 @@ function deviceAuthRequestMessage(deviceId, deviceType, capabilities) {
     });
 }
 
-function deviceAuthResponseMessage(requestId, approved) {
-    const msg = new YukiMessage('device_auth_response', { approved: approved });
+function deviceAuthResponseMessage(requestId, approved, deviceId) {
+    const payload = { approved: approved };
+    if (deviceId) payload.device_id = deviceId;
+    const msg = new YukiMessage('device_auth_response', payload);
     msg.id = requestId;
     return msg;
 }
