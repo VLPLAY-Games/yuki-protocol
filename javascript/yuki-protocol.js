@@ -1,6 +1,7 @@
-// yuki-protocol.js – Унифицированный протокол Yuki v1.1 для JavaScript
+// yuki-protocol.js – Унифицированный протокол Yuki v1.0 для JavaScript
 
-const PROTOCOL_VERSION = "yuki/1.1";
+const PROTOCOL_VERSION = "yuki/1.0";
+const MAX_MESSAGE_SIZE = 1048576; // 1 MiB
 
 class YukiMessage {
     constructor(type, payload, id = null) {
@@ -26,8 +27,11 @@ class YukiMessage {
     }
 
     static fromJSON(data) {
+        if (typeof data === 'string' && data.length > MAX_MESSAGE_SIZE) {
+            throw new Error(`Message too large: ${data.length} bytes`);
+        }
         const obj = typeof data === 'string' ? JSON.parse(data) : data;
-        if (!obj.protocol || !obj.protocol.startsWith('yuki/')) {
+        if (obj.protocol !== PROTOCOL_VERSION) {
             throw new Error(`Unsupported protocol: ${obj.protocol}`);
         }
         const msg = new YukiMessage(obj.type, obj.payload || {}, obj.id);
@@ -117,8 +121,10 @@ function deviceAuthRequestMessage(deviceId, deviceType, capabilities) {
     });
 }
 
-function deviceAuthResponseMessage(requestId, approved) {
-    const msg = new YukiMessage('device_auth_response', { approved: approved });
+function deviceAuthResponseMessage(requestId, approved, deviceId) {
+    const payload = { approved: approved };
+    if (deviceId) payload.device_id = deviceId;
+    const msg = new YukiMessage('device_auth_response', payload);
     msg.id = requestId;
     return msg;
 }

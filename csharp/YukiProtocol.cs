@@ -8,7 +8,7 @@ namespace Yuki_PC
     public class YukiMessage
     {
         [JsonPropertyName("protocol")]
-        public string Protocol { get; set; } = "yuki/1.1";
+        public string Protocol { get; set; } = "yuki/1.0";
 
         [JsonPropertyName("type")]
         public string Type { get; set; }
@@ -105,7 +105,7 @@ namespace Yuki_PC
             {
                 device_id = deviceId,
                 command = command,
-                parameters = parameters ?? new Dictionary<string, object>()
+                @params = parameters ?? new Dictionary<string, object>()
             });
         }
 
@@ -124,7 +124,7 @@ namespace Yuki_PC
             {
                 device_id = deviceId,
                 command = command,
-                parameters = parameters ?? new Dictionary<string, object>()
+                @params = parameters ?? new Dictionary<string, object>()
             });
         }
 
@@ -295,9 +295,16 @@ namespace Yuki_PC
             };
         }
 
+        public const int MaxMessageSize = 1024 * 1024; // 1 MiB
+
         public static YukiMessage ParseMessage(string json)
         {
-            return JsonSerializer.Deserialize<YukiMessage>(json, SerializerOptions);
+            if (string.IsNullOrEmpty(json) || json.Length > MaxMessageSize)
+                throw new ArgumentException("Message missing or too large");
+            var msg = JsonSerializer.Deserialize<YukiMessage>(json, SerializerOptions);
+            if (msg == null || msg.Protocol != "yuki/1.0")
+                throw new ArgumentException($"Unsupported protocol version: {msg?.Protocol}");
+            return msg;
         }
 
         public static string SerializeMessage(YukiMessage message)

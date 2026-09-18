@@ -1,5 +1,5 @@
 """
-Yuki Protocol v1.1 – унифицированная версия для Python и C#
+Yuki Protocol v1.0 – унифицированная версия для Python, C#, JavaScript и C++
 Поддерживает все сообщения: управление подключением, статусы, команды,
 авторизацию, токены, метрики, связь устройств.
 """
@@ -8,7 +8,8 @@ import time
 import uuid
 from typing import Optional, Dict, Any, List
 
-PROTOCOL_VERSION = "yuki/1.1"
+PROTOCOL_VERSION = "yuki/1.0"
+MAX_MESSAGE_SIZE = 1_048_576  # 1 MiB
 
 class YukiMessage:
     def __init__(self, msg_type: str, payload: Dict[str, Any], msg_id: Optional[str] = None):
@@ -29,8 +30,10 @@ class YukiMessage:
 
     @classmethod
     def from_json(cls, data: str) -> "YukiMessage":
+        if len(data) > MAX_MESSAGE_SIZE:
+            raise ValueError(f"Message too large: {len(data)} bytes")
         obj = json.loads(data)
-        if obj.get("protocol") not in ["yuki/1.0", "yuki/1.1"]:
+        if obj.get("protocol") != "yuki/1.0":
             raise ValueError(f"Unsupported protocol version: {obj.get('protocol')}")
         msg = cls(obj["type"], obj.get("payload", {}), obj.get("id"))
         msg.timestamp = obj.get("timestamp", msg.timestamp)
