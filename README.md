@@ -74,14 +74,16 @@ doesn't affect any existing client that keeps using the legacy `auth_token` fiel
 and sends messages (`sendStatus`, `sendMetrics`, `sendCommandResult`, ...) - the same split as the
 other languages, where dispatch (deciding what a `command` *means*) lives in the consuming
 application (`core.py`/`YukiClient.cs`/the humidifier's own `WebSocketHandler.h`), not in the
-protocol layer itself. `yuki-humidifier/Protocol.h` is a synced copy of this file; keep them
-identical when editing either.
+protocol layer itself. `yuki-humidifier` pulls this file in via the same git submodule mechanism as
+every other consumer (`libs/yuki-protocol/esp32/Protocol.h`) - Arduino has no trouble compiling a
+header reached through a relative subfolder path.
 
 ## Keeping submodule checkouts in sync
 
 `yuki-core/libs/yuki-protocol/`, `yuki-device-pc/libs/yuki-protocol/`,
-`yuki-device-pc-linux/libs/yuki-protocol/` and `yuki-webui/static/libs/yuki-protocol/` each carry
-this repo as a git submodule (`git submodule update --init` to fetch it after cloning one of those).
+`yuki-device-pc-linux/libs/yuki-protocol/`, `yuki-humidifier/libs/yuki-protocol/` and
+`yuki-webui/static/libs/yuki-protocol/` each carry this repo as a git submodule (`git submodule
+update --init` to fetch it after cloning one of those).
 When you change a message format here, push it to this repo and bump the submodule pointer (`git
 submodule update --remote`, then commit the new pointer) in every consumer - there's no build step
 or package registry tying them together, just the pinned commit each submodule points at.
