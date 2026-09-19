@@ -45,7 +45,8 @@ class YukiMessage:
 def hello_message(device_id: str, device_type: str,
                   capabilities: List[str] = None,
                   metadata: Dict = None,
-                  auth_token: str = None) -> YukiMessage:
+                  auth_token: str = None,
+                  nonce_c: str = None) -> YukiMessage:
     payload = {
         "device_id": device_id,
         "device_type": device_type,
@@ -53,9 +54,21 @@ def hello_message(device_id: str, device_type: str,
     }
     if metadata:
         payload["metadata"] = metadata
-    if auth_token:
+    if nonce_c:
+        # Challenge-response handshake: send nonce_c instead of auth_token so the token itself
+        # never crosses the network. Pair with challenge_message()/auth_message() below.
+        payload["nonce_c"] = nonce_c
+    elif auth_token:
         payload["auth_token"] = auth_token
     return YukiMessage("hello", payload)
+
+
+def challenge_message(nonce_s: str) -> YukiMessage:
+    return YukiMessage("challenge", {"nonce_s": nonce_s})
+
+
+def auth_message(hmac_value: str) -> YukiMessage:
+    return YukiMessage("auth", {"hmac": hmac_value})
 
 
 def welcome_message(session_id: str, server_time: int,
